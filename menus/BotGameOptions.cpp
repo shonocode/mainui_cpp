@@ -109,24 +109,52 @@ void CMenuBotGameOptions::_Init( void )
 
 void CMenuBotGameOptions::_VidInit( void )
 {
-	// Two columns: left (bot settings), right (server rules)
 	int fieldW = 210;
 	int fieldH = 32;
-	int gap    = 65;
+	int colGap = 20;
+	int margin = 20;
 
-	int xL = 72,  yL = 260;  // left column: bot settings
-	int xR = 350, yR = 260;  // right column: server rules
+	// Responsive: two columns right-aligned, or stacked vertically on narrow screens
+	int twoColW = fieldW * 2 + colGap;
+	bool narrow = ( uiStatic.width < twoColW + margin * 2 + 200 );
 
-	botQuota.SetRect(     xL, yL, fieldW, fieldH ); yL += gap;
-	botDifficulty.SetRect( xL, yL, fieldW, fieldH );
+	if( narrow )
+	{
+		// Single column, centred
+		int gap = 65;
+		int xC = ( uiStatic.width - fieldW ) / 2;
+		int y  = 230;
 
-	startMoney.SetRect(   xR, yR, fieldW, fieldH ); yR += gap;
-	roundTime.SetRect(    xR, yR, fieldW, fieldH ); yR += gap;
-	buyTime.SetRect(      xR, yR, fieldW, fieldH ); yR += gap;
-	freezeTime.SetRect(   xR, yR, fieldW, fieldH ); yR += gap;
-	c4Timer.SetRect(      xR, yR, fieldW, fieldH ); yR += gap;
-	maxRounds.SetRect(    xR, yR, fieldW, fieldH ); yR += gap;
-	friendlyFire.SetCoord( xR, yR );
+		botQuota.SetRect(      xC, y, fieldW, fieldH ); y += gap;
+		botDifficulty.SetRect( xC, y, fieldW, fieldH ); y += gap;
+		startMoney.SetRect(    xC, y, fieldW, fieldH ); y += gap;
+		roundTime.SetRect(     xC, y, fieldW, fieldH ); y += gap;
+		buyTime.SetRect(       xC, y, fieldW, fieldH ); y += gap;
+		freezeTime.SetRect(    xC, y, fieldW, fieldH ); y += gap;
+		c4Timer.SetRect(       xC, y, fieldW, fieldH ); y += gap;
+		maxRounds.SetRect(     xC, y, fieldW, fieldH ); y += gap;
+		friendlyFire.SetCoord( xC, y );
+	}
+	else
+	{
+		// Two columns, right-biased
+		int gap = 80;
+		int xR  = uiStatic.width - fieldW - margin;  // right column flush to right edge
+		int xL  = xR - fieldW - colGap;               // left column next to it
+
+		int yL = 260, yR = 260;
+
+		botQuota.SetRect(      xL, yL, fieldW, fieldH ); yL += gap;
+		botDifficulty.SetRect( xL, yL, fieldW, fieldH );
+
+		startMoney.SetRect(    xR, yR, fieldW, fieldH ); yR += gap;
+		roundTime.SetRect(     xR, yR, fieldW, fieldH ); yR += gap;
+		buyTime.SetRect(       xR, yR, fieldW, fieldH ); yR += gap;
+		freezeTime.SetRect(    xR, yR, fieldW, fieldH ); yR += gap;
+		c4Timer.SetRect(       xR, yR, fieldW, fieldH ); yR += gap;
+		maxRounds.SetRect(     xR, yR, fieldW, fieldH ); yR += gap;
+		friendlyFire.SetCoord( xR, yR );
+	}
 }
 
 ADD_MENU( menu_botgameoptions, CMenuBotGameOptions, UI_BotGameOptions_Menu );

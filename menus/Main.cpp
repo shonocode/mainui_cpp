@@ -337,6 +337,7 @@ void CMenuMain::VidInit( bool connected )
 	// now figure out what's visible
 	resumeGame.SetVisibility( connected );
 	disconnect.SetVisibility( connected && !single );
+	quit.SetVisibility( !connected );
 
 }
 

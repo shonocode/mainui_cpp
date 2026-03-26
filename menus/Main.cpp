@@ -205,10 +205,10 @@ void CMenuMain::_Init( void )
 	hazardCourse.onReleasedClActive = VoidCb( &CMenuMain::HazardCourseDialogCb );
 	hazardCourse.onReleased = VoidCb( &CMenuMain::HazardCourseCb );
 
-	multiPlayer.SetNameAndStatus( L( "GameUI_Multiplayer" ), L( "StringsList_198" ) );
+	multiPlayer.SetNameAndStatus( L( "Play" ), L( "Start bot game" ) );
 	multiPlayer.SetPicture( PC_MULTIPLAYER );
 	multiPlayer.iFlags |= QMF_NOTIFY;
-	multiPlayer.onReleased = UI_MultiPlayer_Menu;
+	multiPlayer.onReleased = UI_CreateGame_Menu;
 
 	configuration.SetNameAndStatus( L( "GameUI_Options" ), L( "StringsList_193" ) );
 	configuration.SetPicture( PC_CONFIG );
@@ -284,22 +284,9 @@ void CMenuMain::_Init( void )
 	AddItem( console );
 	AddItem( disconnect );
 	AddItem( resumeGame );
-	AddItem( newGame );
-
-	if ( bTrainMap )
-		AddItem( hazardCourse );
-
-	AddItem( configuration );
-	AddItem( saveRestore );
 	AddItem( multiPlayer );
-
-	if ( bCustomGame )
-		AddItem( customGame );
-
-	AddItem( previews );
+	AddItem( configuration );
 	AddItem( quit );
-	AddItem( minimizeBtn );
-	AddItem( quitButton );
 }
 
 /*
@@ -317,41 +304,20 @@ void CMenuMain::VidInit( bool connected )
 	// no visible console button gap
 	int ygap = (( 404 - 373 ) / 480.0 ) * 768.0;
 
-	// statically positioned items
-	minimizeBtn.SetRect( uiStatic.width - 72, 13, 32, 32 );
-	quitButton.SetRect( uiStatic.width - 36, 13, 32, 32 );
+	// statically positioned items (minimize/quit buttons hidden for browser build)
 
-	previews.SetCoord( hoffset, previews_voffset );
-	quit.SetCoord( hoffset, previews_voffset + ygap );
+	quit.SetCoord( hoffset, previews_voffset );
 
 	// let's start calculating positions
 	int yoffset = previews_voffset - ygap;
 
-	if( bCustomGame )
-	{
-		customGame.SetCoord( hoffset, yoffset );
-		yoffset -= ygap;
-	}
+	configuration.SetCoord( hoffset, yoffset );
+	yoffset -= ygap;
 
 	multiPlayer.SetCoord( hoffset, yoffset );
 	yoffset -= ygap;
 
 	bool single = gpGlobals->maxClients < 2;
-
-	saveRestore.SetCoord( hoffset, yoffset );
-	yoffset -= ygap;
-
-	configuration.SetCoord( hoffset, yoffset );
-	yoffset -= ygap;
-
-	if( bTrainMap )
-	{
-		hazardCourse.SetCoord( hoffset, yoffset );
-		yoffset -= ygap;
-	}
-
-	newGame.SetCoord( hoffset, yoffset );
-	yoffset -= ygap;
 
 	if( connected )
 	{
@@ -372,18 +338,6 @@ void CMenuMain::VidInit( bool connected )
 	resumeGame.SetVisibility( connected );
 	disconnect.SetVisibility( connected && !single );
 
-	if( connected && single )
-	{
-		saveRestore.SetNameAndStatus( L( "Save\\Load Game" ), L( "StringsList_192" ) );
-		saveRestore.SetPicture( PC_SAVE_LOAD_GAME );
-		saveRestore.onReleased = UI_SaveLoad_Menu;
-	}
-	else
-	{
-		saveRestore.SetNameAndStatus( L( "GameUI_LoadGame" ), L( "StringsList_191" ) );
-		saveRestore.SetPicture( PC_LOAD_GAME );
-		saveRestore.onReleased = UI_LoadGame_Menu;
-	}
 }
 
 void CMenuMain::_VidInit()

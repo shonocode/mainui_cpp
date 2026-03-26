@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -67,12 +67,8 @@ public:
 	static void Begin( CMenuBaseItem *pSelf, void *pExtra );
 
 	void Reload( void ) override;
-	void SaveCvars( void );
 
-	CMenuField	maxClients;
-	CMenuField	hostName;
-	CMenuField	password;
-	CMenuCheckBox   nat;
+	CMenuField maxClients;
 
 	// newgame prompt dialog
 	CMenuYesNoMessageBox msgBox;
@@ -114,8 +110,7 @@ void CMenuCreateGame::Begin( CMenuBaseItem *pSelf, void *pExtra )
 			EngFuncs::HostEndGame( "starting new server" );
 	}
 
-	EngFuncs::CvarSetValue( "deathmatch", 1.0f );	// start deathmatch as default
-	menu->SaveCvars();
+	EngFuncs::CvarSetValue( "deathmatch", 1.0f );
 
 	EngFuncs::PlayBackgroundTrack( NULL, NULL );
 
@@ -127,13 +122,37 @@ void CMenuCreateGame::Begin( CMenuBaseItem *pSelf, void *pExtra )
 	snprintf( cmd, sizeof( cmd ), "exec %s\n", listenservercfg );
 	EngFuncs::ClientCmd( true, cmd );
 
-	// dirty listenserver config form old xash may rewrite maxplayers
 	menu->maxClients.WriteCvar();
 
-	// hack: wait three frames allowing server to completely shutdown, reapply maxplayers and start new map
+	// apply game rules (from BotGameOptions cvars) and start map
 	char cmd2[256];
 	Com_EscapeCommand( cmd2, mapName, sizeof( cmd2 ));
-	snprintf( cmd, sizeof( cmd ), "disconnect;menu_connectionprogress localserver;wait;wait;wait;maxplayers %i;latch;map %s\n", atoi( menu->maxClients.GetBuffer() ), cmd2 );
+	snprintf( cmd, sizeof( cmd ),
+		"disconnect;menu_connectionprogress localserver;wait;wait;wait;"
+		"maxplayers %i;latch;"
+		"yb_join_after_player 1;"
+		"yb_first_human_restart 1;"
+		"yb_quota %.0f;"
+		"yb_difficulty %.0f;"
+		"mp_startmoney %.0f;"
+		"mp_roundtime %.2f;"
+		"mp_buytime %.2f;"
+		"mp_freezetime %.0f;"
+		"mp_c4timer %.0f;"
+		"mp_friendlyfire %.0f;"
+		"mp_maxrounds %.0f;"
+		"map %s\n",
+		atoi( menu->maxClients.GetBuffer() ),
+		EngFuncs::GetCvarFloat( "yb_quota" ),
+		EngFuncs::GetCvarFloat( "yb_difficulty" ),
+		EngFuncs::GetCvarFloat( "mp_startmoney" ),
+		EngFuncs::GetCvarFloat( "mp_roundtime" ),
+		EngFuncs::GetCvarFloat( "mp_buytime" ),
+		EngFuncs::GetCvarFloat( "mp_freezetime" ),
+		EngFuncs::GetCvarFloat( "mp_c4timer" ),
+		EngFuncs::GetCvarFloat( "mp_friendlyfire" ),
+		EngFuncs::GetCvarFloat( "mp_maxrounds" ),
+		cmd2 );
 	EngFuncs::ClientCmd( false, cmd );
 }
 
@@ -192,7 +211,7 @@ void CMenuMapListModel::Update( void )
 
 /*
 =================
-CMenuCreateGame::Init
+CMenuCreateGame::_Init
 =================
 */
 void CMenuCreateGame::_Init( void )
@@ -200,26 +219,18 @@ void CMenuCreateGame::_Init( void )
 	uiStatic.needMapListUpdate = true;
 	banner.SetPicture( ART_BANNER );
 
-	nat.szName = L( "Use NAT Bypass instead of direct mode" );
-	nat.bChecked = true;
-	nat.LinkCvar( "sv_nat" );
-
-	// add them here, so "done" button can be used by mapsListModel::Update
 	AddItem( banner );
-	CMenuPicButton *advOpt = AddButton( L( "Adv. Options" ), nullptr, PC_ADV_OPT, UI_AdvServerOptions_Menu );
-	advOpt->SetGrayed( !UI_AdvServerOptions_IsAvailable() );
 
 	done = AddButton( L( "GameUI_OK" ), nullptr, PC_OK, Begin );
 	done->onReleasedClActive = msgBox.MakeOpenEvent();
+
+	AddButton( L( "Game Options" ), nullptr, PC_GAME_OPTIONS, UI_BotGameOptions_Menu );
+	AddButton( L( "GameUI_Cancel" ), nullptr, PC_CANCEL, VoidCb( &CMenuCreateGame::Hide ) );
 
 	mapsList.SetCharSize( QM_SMALLFONT );
 	mapsList.SetupColumn( 0, L( "GameUI_Map" ), 0.5f );
 	mapsList.SetupColumn( 1, L( "Title" ), 0.5f );
 	mapsList.SetModel( &mapsListModel );
-
-	hostName.szName = L( "GameUI_ServerName" );
-	hostName.iMaxLength = 28;
-	hostName.LinkCvar( "hostname" );
 
 	maxClients.iMaxLength = 3;
 	maxClients.bNumbersOnly = true;
@@ -229,64 +240,32 @@ void CMenuCreateGame::_Init( void )
 		CMenuField *self = (CMenuField*)pSelf;
 		const char *buf = self->GetBuffer();
 		if( buf[0] == 0 ) return;
-
 		int players = atoi( buf );
-		if( players <= 1 )
-			self->SetBuffer( "2" );
-		else if( players > 32 )
-			self->SetBuffer( "32" );
+		if( players <= 1 )  self->SetBuffer( "2" );
+		else if( players > 32 ) self->SetBuffer( "32" );
 	});
 	SET_EVENT_MULTI( maxClients.onCvarGet,
 	{
 		CMenuField *self = (CMenuField*)pSelf;
 		const char *buf = self->GetBuffer();
-
 		int players = atoi( buf );
-		if( players <= 1 )
-			self->SetBuffer( "16" );
-		else if( players > 32 )
-			self->SetBuffer( "32" );
+		if( players <= 1 )  self->SetBuffer( "16" );
+		else if( players > 32 ) self->SetBuffer( "32" );
 	});
 	maxClients.LinkCvar( "maxplayers" );
-
-	password.szName = L( "GameUI_Password" );
-	password.iMaxLength = 16;
-	password.eTextAlignment = QM_CENTER;
-	password.bHideInput = true;
-	password.LinkCvar( "sv_password" );
 
 	msgBox.onPositive = Begin;
 	msgBox.SetMessage( L( "Starting a new game will exit any current game, OK to exit?" ) );
 	msgBox.Link( this );
 
-	AddButton( L( "GameUI_Cancel" ), nullptr, PC_CANCEL, VoidCb( &CMenuCreateGame::Hide ) );
-	AddItem( hostName );
 	AddItem( maxClients );
-	AddItem( password );
-	AddItem( nat );
 	AddItem( mapsList );
 }
 
 void CMenuCreateGame::_VidInit()
 {
-	nat.SetCoord( 72, 685 );
-	if( !EngFuncs::GetCvarFloat("public") )
-		nat.Hide();
-	else nat.Show();
-
 	mapsList.SetRect( 590, 230, -20, 465 );
-
-	hostName.SetRect( 350, 260, 205, 32 );
-	maxClients.SetRect( 350, 360, 205, 32 );
-	password.SetRect( 350, 460, 205, 32 );
-}
-
-void CMenuCreateGame::SaveCvars()
-{
-	hostName.WriteCvar();
-	maxClients.WriteCvar();
-	password.WriteCvar();
-	EngFuncs::CvarSetValue( "sv_nat", EngFuncs::GetCvarFloat( "public" ) ? nat.bChecked : 0 );
+	maxClients.SetRect( 350, 260, 205, 32 );
 }
 
 void CMenuCreateGame::Reload( void )
